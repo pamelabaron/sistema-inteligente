@@ -1,20 +1,72 @@
-import math
+import re
 
 
-# funcoes de pertinencia 
+LEXICO_PRECO = {
+    # sinaliza produto caro (valor alto = percepção de caro)
+    "caro": +35, "caríssimo": +55, "salgado": +30, "custa muito": +40,
+    "overpriced": +45, "expensive": +40, "pricey": +30, "absurdo": +45,
+    "cobram demais": +40, "preço alto": +35, "custou muito": +40,
+    # sinaliza produto barato (valor negativo = percepção de barato)
+    "barato": -35, "econômico": -30, "acessível": -25, "custo baixo": -30,
+    "cheap": -30, "affordable": -25, "budget": -25, "em conta": -30,
+    "bom preço": -25, "vale o preço": -20, "preço justo": -20,
+    "custo benefício": -15, "cost effective": -20,
+}
 
-def triangular(x, a, b, c):
-    # funcao de pertinencia triangular
-    if x <= a or x >= c:
-        return 0.0
-    elif a < x <= b:
-        return (x - a) / (b - a)
-    else:
-        return (c - x) / (c - b)
+LEXICO_QUALIDADE = {
+    # alta qualidade
+    "excelente": +50, "incrível": +50, "ótimo": +40, "perfeito": +50,
+    "fantástico": +50, "excepcional": +55, "top": +40, "premium": +45,
+    "rápido": +30, "potente": +35, "eficiente": +35, "durável": +35,
+    "confiável": +30, "preciso": +30, "silencioso": +25, "nítido": +30,
+    "amazing": +50, "excellent": +50, "great": +40, "perfect": +50,
+    "fast": +30, "powerful": +35, "reliable": +30, "smooth": +30,
+    "good": +30, "works": +20, "solid": +30,
+    # baixa qualidade
+    "péssimo": -55, "horrível": -55, "terrível": -50, "lixo": -60,
+    "defeito": -50, "quebrou": -45, "travou": -40, "esquenta": -35,
+    "ruim": -45, "fraco": -35, "lento": -35, "barulhento": -30,
+    "inutilizável": -55, "decepcionante": -45, "frustrado": -40,
+    "terrible": -55, "awful": -55, "broken": -50, "defective": -50,
+    "bad": -45, "slow": -35, "noisy": -30, "disappointing": -45,
+    "worst": -60, "failed": -50,
+}
+
+
+def extrair_percepcoes(texto):
+    # analisa o texto e retorna scores de percepção de preço e qualidade. leva em conta negações: "não é caro" inverte o sinal do termo. retorna valores em escala 0-100.
+    
+    texto_lower = texto.lower()
+    palavras = texto_lower.split()
+
+    negacoes = {"não", "nao", "nem", "nunca", "not", "no", "never", "without"}
+
+    def score_lexico(lexico, palavras):
+        score = 0
+        for i, palavra in enumerate(palavras):
+            negar = i > 0 and palavras[i - 1] in negacoes
+            for termo, peso in lexico.items():
+                if termo in palavra or termo in " ".join(palavras[max(0, i-1):i+3]):
+                    score += (-peso if negar else peso)
+                    break
+        return score
+
+    raw_preco = score_lexico(LEXICO_PRECO, palavras)
+    raw_qualidade = score_lexico(LEXICO_QUALIDADE, palavras)
+
+    # normaliza para escala 0-100
+    # preço com score positivo = caro (100), negativo = barato (0), zero = médio (50)
+    percepcao_preco = max(0, min(100, 50 + raw_preco))
+    # qualidade com score positivo = bom (100), negativo = ruim (0), zero = médio (50)
+    percepcao_qualidade = max(0, min(100, 50 + raw_qualidade))
+
+    return percepcao_preco, percepcao_qualidade
+
+
+# funções de pertinência
 
 
 def trapezoidal(x, a, b, c, d):
-    # funcao de pertinencia trapezoidal
     if x <= a or x >= d:
         return 0.0
     elif a < x <= b:
@@ -25,172 +77,120 @@ def trapezoidal(x, a, b, c, d):
         return (d - x) / (d - c)
 
 
-#  pertinencias para prob_positivo 0 a 1
-
-def sentimento_negativo(prob):
-    # alta pertinencia quando prob positivo é baixa - sentimento  negativo
-    return trapezoidal(prob, 0.0, 0.0, 0.2, 0.45)
-
-
-def sentimento_neutro(prob):
-    return triangular(prob, 0.3, 0.5, 0.7)
+def triangular(x, a, b, c):
+    if x <= a or x >= c:
+        return 0.0
+    elif a < x <= b:
+        return (x - a) / (b - a)
+    else:
+        return (c - x) / (c - b)
 
 
-def sentimento_positivo(prob):
-    return trapezoidal(prob, 0.55, 0.75, 1.0, 1.0)
+# pertinências para percepção de preço (0=barato, 100=caro)
+def preco_barato(x):    return trapezoidal(x, 0, 0, 20, 40)
+def preco_medio(x):     return triangular(x, 25, 50, 75)
+def preco_caro(x):      return trapezoidal(x, 60, 80, 100, 100)
+
+# pertinências para percepção de qualidade (0=ruim, 100=ótimo)
+def qual_ruim(x):       return trapezoidal(x, 0, 0, 20, 40)
+def qual_media(x):      return triangular(x, 25, 50, 75)
+def qual_boa(x):        return trapezoidal(x, 60, 80, 100, 100)
+
+# pertinências para o score de recomendação (saída)
+def rec_nao_recomendar(x):  return trapezoidal(x, 0, 0, 15, 30)
+def rec_cautela(x):         return triangular(x, 15, 30, 50)
+def rec_considerar(x):      return triangular(x, 35, 50, 65)
+def rec_recomendar(x):      return triangular(x, 55, 70, 85)
+def rec_top_escolha(x):     return trapezoidal(x, 75, 90, 100, 100)
 
 
-# pertinencias para valor_produto 0 a 500 reais
+# base de regras fuzzy
+def avaliar_regras(perc_preco, perc_qualidade):
+    pb = preco_barato(perc_preco)
+    pm = preco_medio(perc_preco)
+    pc = preco_caro(perc_preco)
 
-def valor_baixo(v):
-    return trapezoidal(v, 0, 0, 50, 150)
-
-
-def valor_medio(v):
-    return triangular(v, 80, 200, 350)
-
-
-def valor_alto(v):
-    return trapezoidal(v, 280, 400, 500, 500)
-
-
-# pertinencias para score_prioridade 0 a 100
-# essa é a variavel de saida do sistema fuzzy
-
-def prioridade_muito_baixa(x):
-    return trapezoidal(x, 0, 0, 10, 25)
-
-
-def prioridade_baixa(x):
-    return triangular(x, 10, 25, 45)
-
-
-def prioridade_media(x):
-    return triangular(x, 35, 50, 65)
-
-
-def prioridade_alta(x):
-    return triangular(x, 55, 75, 90)
-
-
-def prioridade_muito_alta(x):
-    return trapezoidal(x, 80, 92, 100, 100)
-
-
-#  base de regras fuzzy 
-# formato: grau_sentimento, grau_valor ->  conjunto_saida, funcao_saida
-# regras baseadas em conhecimento de dominio de e-commerce
-
-def avaliar_regras(prob_positivo, valor_produto):
-    # calcula graus de pertinencia das entradas
-    neg = sentimento_negativo(prob_positivo)
-    neu = sentimento_neutro(prob_positivo)
-    pos = sentimento_positivo(prob_positivo)
-
-    v_baixo = valor_baixo(valor_produto)
-    v_medio = valor_medio(valor_produto)
-    v_alto = valor_alto(valor_produto)
+    qr = qual_ruim(perc_qualidade)
+    qm = qual_media(perc_qualidade)
+    qb = qual_boa(perc_qualidade)
 
     regras = []
 
-    # regra 1 sentimento negativo com valor baixo -> prioridade muito baixa
-    regras.append((min(neg, v_baixo), prioridade_muito_baixa))
+    # preço baixo
+    regras.append((min(pb, qr), rec_cautela))          # barato e ruim: cautela
+    regras.append((min(pb, qm), rec_considerar))       # barato e médio: considerar
+    regras.append((min(pb, qb), rec_recomendar))       # barato e bom: recomendar
 
-    # regra 2 sentimento negativo com valor medio -> prioridade baixa
-    regras.append((min(neg, v_medio), prioridade_baixa))
+    # preço médio
+    regras.append((min(pm, qr), rec_nao_recomendar))   # médio e ruim: não recomendar
+    regras.append((min(pm, qm), rec_considerar))       # médio e médio: considerar
+    regras.append((min(pm, qb), rec_recomendar))       # médio e bom: recomendar
 
-    # regra 3 sentimento negativo com valor alto -> prioridade media (cliente pagou caro)
-    regras.append((min(neg, v_alto), prioridade_media))
+    # preço alto 
+    regras.append((min(pc, qr), rec_nao_recomendar))   # caro e ruim: não recomendar
+    regras.append((min(pc, qm), rec_cautela))          # caro e médio: cautela
+    regras.append((min(pc, qb), rec_considerar))       # caro e bom: considerar o custo benefício médio
 
-    # regra 4 sentimento neutro com qualquer valor -> prioridade media
-    regras.append((min(neu, v_baixo), prioridade_baixa))
-    regras.append((min(neu, v_medio), prioridade_media))
-    regras.append((min(neu, v_alto), prioridade_media))
-
-    # regra 5 sentimento positivo com valor baixo -> prioridade media
-    regras.append((min(pos, v_baixo), prioridade_media))
-
-    # regra 6 sentimento positivo com valor medio -> prioridade alta
-    regras.append((min(pos, v_medio), prioridade_alta))
-
-    # regra 7 sentimento positivo com valor alto -> prioridade muito alta
-    regras.append((min(pos, v_alto), prioridade_muito_alta))
+    # regra extra: qualidade excepcional independe do preço
+    qualidade_muito_boa = max(0, (perc_qualidade - 85) / 15)
+    regras.append((qualidade_muito_boa * 0.8, rec_top_escolha))
 
     return regras
 
 
-#  desfuzzificacao pelo metodo do centroide
-
-def defuzzificar(regras, resolucao=200):
-    # discretiza o universo de saida de 0 a 100
+def defuzzificar(regras, resolucao=300):
     universo = [i * 100 / resolucao for i in range(resolucao + 1)]
-
-    numerador = 0.0
-    denominador = 0.0
-
+    num = 0.0
+    den = 0.0
     for x in universo:
-        # aplica agregacao maxima (mamdani)
-        ativacao_max = 0.0
-        for (grau_regra, func_saida) in regras:
-            # recorte da funçao de saida pelo grau de ativacao da regra
-            ativacao = min(grau_regra, func_saida(x))
-            ativacao_max = max(ativacao_max, ativacao)
-
-        numerador += x * ativacao_max
-        denominador += ativacao_max
-
-    if denominador == 0:
-        return 50.0  # valor padrao se nenhuma regra foi ativada
-
-    return numerador / denominador
+        ativacao = 0.0
+        for (grau, func) in regras:
+            ativacao = max(ativacao, min(grau, func(x)))
+        num += x * ativacao
+        den += ativacao
+    return num / den if den > 0 else 50.0
 
 
-# interface principal
+def calcular_score_fuzzy(texto=None, perc_preco=None, perc_qualidade=None):
+    #aceita texto OU valores diretos de percepção. retorna score (0-100) e dicionário com detalhes.
+    
+    if texto is not None:
+        perc_preco, perc_qualidade = extrair_percepcoes(texto)
 
-def calcular_score_fuzzy(prob_positivo, valor_produto):
-    # prob_positivo: saida do naive bayes (0.0 a 1.0)
-    # valor_produto: valor numerico do produto em reais (0 a 500)
-
-    regras = avaliar_regras(prob_positivo, valor_produto)
+    regras = avaliar_regras(perc_preco, perc_qualidade)
     score = defuzzificar(regras)
 
-    # coleta graus de pertinencia para debug
     detalhes = {
-        "entradas": {
-            "prob_positivo": prob_positivo,
-            "valor_produto": valor_produto
+        "percepcao_preco": round(perc_preco, 1),
+        "percepcao_qualidade": round(perc_qualidade, 1),
+        "pertinencias_preco": {
+            "barato": round(preco_barato(perc_preco), 3),
+            "medio":  round(preco_medio(perc_preco), 3),
+            "caro":   round(preco_caro(perc_preco), 3),
         },
-        "pertinencias_sentimento": {
-            "negativo": round(sentimento_negativo(prob_positivo), 4),
-            "neutro":   round(sentimento_neutro(prob_positivo), 4),
-            "positivo": round(sentimento_positivo(prob_positivo), 4)
+        "pertinencias_qualidade": {
+            "ruim":  round(qual_ruim(perc_qualidade), 3),
+            "media": round(qual_media(perc_qualidade), 3),
+            "boa":   round(qual_boa(perc_qualidade), 3),
         },
-        "pertinencias_valor": {
-            "baixo": round(valor_baixo(valor_produto), 4),
-            "medio": round(valor_medio(valor_produto), 4),
-            "alto":  round(valor_alto(valor_produto), 4)
-        },
-        "score_fuzzy": round(score, 2)
+        "score_fuzzy": round(score, 2),
     }
-
     return score, detalhes
 
 
 if __name__ == "__main__":
-    print("camada 2: sistema de inferencia fuzzy\n")
-
+    print("camada 2: sistema de inferência fuzzy\n")
     casos = [
-        (0.85, 300, "cliente positivo com produto caro"),
-        (0.15, 50,  "cliente negativo com produto barato"),
-        (0.50, 200, "cliente neutro com produto medio"),
-        (0.90, 450, "cliente muito positivo com produto muito caro"),
-        (0.10, 400, "cliente muito negativo com produto caro"),
+        "muito caro mas muito bom, qualidade excepcional",
+        "barato e péssimo, quebrou na primeira semana",
+        "preço médio e qualidade ok, sem reclamações",
+        "caro e horrível, não recomendo de jeito nenhum",
+        "barato e excelente, melhor custo benefício",
+        "preço justo e produto bom, recomendo",
     ]
-
-    for prob, valor, descricao in casos:
-        score, detalhes = calcular_score_fuzzy(prob, valor)
-        print(f"caso: {descricao}")
-        print(f"  prob_positivo={prob:.2f}, valor_produto=R${valor:.0f}")
-        print(f"  score fuzzy resultante: {score:.2f}/100")
-        print(f"  pertinencias sentimento: {detalhes['pertinencias_sentimento']}")
-        
+    for texto in casos:
+        score, d = calcular_score_fuzzy(texto=texto)
+        print(f"texto: \"{texto}\"")
+        print(f"  preço percebido: {d['percepcao_preco']:.0f}/100  |  qualidade percebida: {d['percepcao_qualidade']:.0f}/100")
+        print(f"  score fuzzy: {score:.1f}/100")
+        print()

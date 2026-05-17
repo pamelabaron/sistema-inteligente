@@ -1,173 +1,191 @@
-import sys
 import time
-import random
 
-# importa as tres camadas do sistema
-from camada1_pln import criar_modelo
+from camada1_pln import obter_modelo
 from camada2_fuzzy import calcular_score_fuzzy
-from camada3_ga import algoritmo_genetico, CATALOGO_PRODUTOS
+from camada3_ga import algoritmo_genetico, PARAMS_GA
 
-random.seed(42)
+# casos de teste
+CASOS = [
+    {
+        "descricao": "cliente satisfeito com produto caro",
+        "review":    "notebook excelente mas muito caro, processador rápido e bateria dura o dia todo",
+        "orcamento": 3000,
+    },
+    {
+        "descricao": "cliente insatisfeito com produto barato",
+        "review":    "ssd parou de funcionar após um mês, péssimo produto, não recomendo de jeito nenhum",
+        "orcamento": 1000,
+    },
+    {
+        "descricao": "cliente neutro com orçamento médio",
+        "review":    "monitor ok, nada especial, preço razoável, atende o básico",
+        "orcamento": 2000,
+    },
+    {
+        "descricao": "produto caro mas qualidade excepcional",
+        "review":    "muito caro mas qualidade excepcional, placa de vídeo incrível, vale cada centavo",
+        "orcamento": 5000,
+    },
+]
 
 
-def separador(titulo=""):
-    largura = 60
-    if titulo:
-        espaco = (largura - len(titulo) - 2) // 2
-        print("\n" + "=" * espaco + f" {titulo} " + "=" * espaco)
+def linha(char="─", largura=58):
+    print(char * largura)
+
+
+def cabecalho(titulo):
+    print()
+    linha("═")
+    print(f"  {titulo}")
+    linha("═")
+
+
+def secao(num, titulo):
+    print()
+    linha()
+    print(f"  camada {num}: {titulo}")
+    linha()
+
+
+def executar(caso):
+    cabecalho(caso["descricao"].upper())
+    print(f"  review: \"{caso['review']}\"")
+    print(f"  orçamento: R${caso['orcamento']:,.0f}")
+
+    # camada 1: naive bayes
+    secao(1, "percepção e sentimento (naive bayes)")
+
+    modelo = obter_modelo()
+    resultado_nb = modelo.classificar(caso["review"])
+
+    classe = resultado_nb["classe"]
+    probs  = resultado_nb["probabilidades"]
+    tokens = resultado_nb["tokens"]
+
+    print(f"\n  classificação: {classe.upper()}")
+    print()
+    for rotulo in ["positivo", "negativo", "neutro"]:
+        pct = probs[rotulo] * 100
+        barra = "█" * int(pct / 4)
+        print(f"  {rotulo:<10} {barra:<25} {pct:5.1f}%")
+
+    print(f"\n  tokens usados: {', '.join(tokens) if tokens else '(nenhum após preprocessamento)'}")
+
+    # camada 2: fuzzy
+    secao(2, "inferência fuzzy (mamdani)")
+
+    score_fuzzy, detalhes = calcular_score_fuzzy(texto=caso["review"])
+
+    pp = detalhes["percepcao_preco"]
+    pq = detalhes["percepcao_qualidade"]
+    pert_p = detalhes["pertinencias_preco"]
+    pert_q = detalhes["pertinencias_qualidade"]
+
+    print(f"\n  percepção de preço:     {pp:.0f}/100  (0=barato, 100=caro)")
+    print(f"  percepção de qualidade: {pq:.0f}/100  (0=ruim, 100=ótimo)")
+
+    print(f"\n  pertinências de preço:")
+    for k, v in pert_p.items():
+        barra = "█" * int(v * 20)
+        print(f"    {k:<8} {barra:<20} {v:.3f}")
+
+    print(f"\n  pertinências de qualidade:")
+    for k, v in pert_q.items():
+        barra = "█" * int(v * 20)
+        print(f"    {k:<8} {barra:<20} {v:.3f}")
+
+    print(f"\n  score fuzzy resultante: {score_fuzzy:.2f} / 100")
+
+    # interpreta o score
+    if score_fuzzy >= 80:
+        nivel = "top escolha"
+    elif score_fuzzy >= 65:
+        nivel = "recomendar"
+    elif score_fuzzy >= 45:
+        nivel = "considerar"
+    elif score_fuzzy >= 25:
+        nivel = "cautela"
     else:
-        print("\n" + "=" * largura)
+        nivel = "não recomendar"
+    print(f"  nível de recomendação:  {nivel}")
 
+    # camada 3: algoritmo genético
+    secao(3, "recomendação por algoritmo genético")
 
-def executar_sistema(review_usuario, valor_produto, orcamento_usuario):
-    
-   # executa o pipeline completo das tres camadas para um usuario
+    params = dict(PARAMS_GA)
 
-   # parametros:
-       # review_usuario: texto da avaliacao ou comentario do usuario
-       # valor_produto:  valor numerico do produto avaliado (em reais)
-       # orcamento_usuario: orcamento disponivel para recomendacoes
-    
+    print(f"\n  parâmetros do ga:")
+    print(f"    população:          {params['tamanho_populacao']} indivíduos")
+    print(f"    gerações:           {params['num_geracoes']}")
+    print(f"    prob. cruzamento:   {params['prob_cruzamento']}")
+    print(f"    prob. mutação:      {params['prob_mutacao']}")
+    print(f"    torneio (k):        {params['k_torneio']}")
+    print(f"    produtos por lista: {N_RECOMENDACOES}")
 
-    separador("camada 1: analise de sentimento")
-    print(f"\nreview recebido: \"{review_usuario}\"")
-    print(f"valor do produto avaliado: R${valor_produto:.2f}")
-
-    # camada 1: naive bayes classifica o sentimento
-    modelo_nb = criar_modelo()
-    resultado_nb = modelo_nb.classificar(review_usuario)
-
-    prob_positivo = resultado_nb["probabilidades"]["positivo"]
-    prob_negativo = resultado_nb["probabilidades"]["negativo"]
-    prob_neutro   = resultado_nb["probabilidades"]["neutro"]
-
-    print(f"\nclassificacao: {resultado_nb['classe'].upper()}")
-    print(f"probabilidade positivo: {prob_positivo:.4f}")
-    print(f"probabilidade negativo: {prob_negativo:.4f}")
-    print(f"probabilidade neutro:   {prob_neutro:.4f}")
-    print(f"tokens utilizados: {resultado_nb['tokens_usados']}")
-
-    separador("camada 2: inferencia fuzzy")
-    print(f"\nentradas do controlador fuzzy:")
-    print(f"  prob_positivo (saida do naive bayes): {prob_positivo:.4f}")
-    print(f"  valor do produto: R${valor_produto:.2f}")
-
-    # camada 2: sistema fuzzy calcula o score de prioridade
-    score_fuzzy, detalhes_fuzzy = calcular_score_fuzzy(prob_positivo, valor_produto)
-
-    pert = detalhes_fuzzy["pertinencias_sentimento"]
-    pert_v = detalhes_fuzzy["pertinencias_valor"]
-
-    print(f"\npertinencias de sentimento:")
-    print(f"  negativo: {pert['negativo']:.4f}")
-    print(f"  neutro:   {pert['neutro']:.4f}")
-    print(f"  positivo: {pert['positivo']:.4f}")
-
-    print(f"\npertinencias de valor:")
-    print(f"  baixo: {pert_v['baixo']:.4f}")
-    print(f"  medio: {pert_v['medio']:.4f}")
-    print(f"  alto:  {pert_v['alto']:.4f}")
-
-    print(f"\nscore fuzzy resultante: {score_fuzzy:.2f} / 100")
-
-    # interpreta o score fuzzy de forma qualitativa
-    if score_fuzzy < 25:
-        nivel = "muito baixo (baixa prioridade de recomendacao)"
-    elif score_fuzzy < 45:
-        nivel = "baixo (recomendacoes economicas)"
-    elif score_fuzzy < 60:
-        nivel = "medio (recomendacoes balanceadas)"
-    elif score_fuzzy < 80:
-        nivel = "alto (recomendacoes de qualidade)"
-    else:
-        nivel = "muito alto (melhores recomendacoes disponíveis)"
-
-    print(f"nivel de prioridade: {nivel}")
-
-    separador("camada 3: algoritmo genetico")
-    print(f"\norcamento do usuario: R${orcamento_usuario:.2f}")
-    print(f"score fuzzy para o ga: {score_fuzzy:.2f}")
-    print("\nexecutando algoritmo genetico (100 geracoes, populacao de 50 individuos)...")
-
+    print(f"\n  executando...")
     inicio = time.time()
+    resultado_ga = algoritmo_genetico(score_fuzzy, caso["orcamento"], params)
+    duracao = time.time() - inicio
 
-    # camada 3: ga seleciona a melhor combinacao de produtos
-    resultado_ga = algoritmo_genetico(
-        score_fuzzy=score_fuzzy,
-        orcamento=orcamento_usuario,
-        tamanho_populacao=50,
-        num_geracoes=100
-    )
+    print(f"  concluído em {duracao:.3f}s")
 
-    tempo = time.time() - inicio
+    # população inicial
+    print(f"\n  população inicial (geração 0):")
+    print(f"  {'#':<4} {'produtos selecionados':<38} {'fitness'}")
+    linha("-", 58)
+    fits = resultado_ga["fits_iniciais"]
+    melhor_idx = fits.index(max(fits))
+    for i, (ind, fit) in enumerate(zip(resultado_ga["populacao_inicial"], fits)):
+        from camada3_ga import CATALOGO
+        nomes = [CATALOGO[j]["nome"].split()[0] for j, b in enumerate(ind) if b == 1]
+        marcador = " ◀ melhor" if i == melhor_idx else ""
+        print(f"  {i+1:<4} {', '.join(nomes):<38} {fit:.4f}{marcador}")
 
-    print(f"concluido em {tempo:.2f}s")
-    print(f"\nfitness da solucao final: {resultado_ga['fitness_final']:.4f}")
-    print(f"preco total da recomendacao: R${resultado_ga['preco_total']:.2f}")
-    print(f"dentro do orcamento: {'sim' if resultado_ga['dentro_orcamento'] else 'NAO'}")
-    print(f"categorias cobertas: {', '.join(resultado_ga['categorias_cobertas'])}")
+    # convergência resumida
+    hist = resultado_ga["historico_fitness"]
+    print(f"\n  convergência (fitness a cada 20 gerações):")
+    for g in range(0, len(hist), 20):
+        barra = "█" * int(hist[g] * 30)
+        print(f"    gen {g:>3}: {barra:<30} {hist[g]:.4f}")
+    print(f"    gen {len(hist)-1:>3}: {'█' * int(hist[-1]*30):<30} {hist[-1]:.4f}")
 
-    separador("recomendacao final")
-    print("\nprodutos recomendados para o usuario:")
-    for i, produto in enumerate(resultado_ga["produtos_recomendados"], 1):
-        print(f"\n  {i}. {produto['nome']}")
-        print(f"     preco: R${produto['preco']:.2f}")
-        print(f"     categoria: {produto['categoria']}")
-        print(f"     avaliacao historica: {produto['pontuacao_historica']:.2f}")
+    # resultado final
+    prods = resultado_ga["produtos"]
+    preco_total = resultado_ga["preco_total"]
+    ok = resultado_ga["dentro_orcamento"]
 
-    print(f"\ntotal a pagar: R${resultado_ga['preco_total']:.2f} de R${orcamento_usuario:.2f} disponíveis")
-
-    separador()
-
-    return {
-        "sentimento": resultado_nb,
-        "score_fuzzy": score_fuzzy,
-        "recomendacoes": resultado_ga
-    }
+    print(f"\n  produtos recomendados:")
+    linha("-", 58)
+    for i, p in enumerate(prods, 1):
+        print(f"  {i}. {p['nome']}")
+        print(f"     categoria: {p['cat']}  |  avaliação: {p['aval']*100:.0f}%  |  R${p['preco']:,}")
+    linha("-", 58)
+    status = "✓ dentro do orçamento" if ok else "✗ acima do orçamento"
+    print(f"  total: R${preco_total:,}  |  {status}")
+    print(f"  fitness final: {resultado_ga['fitness_final']:.4f}")
 
 
 def main():
-    print("\n" + "#" * 60)
-    print("#        sistema inteligente de recomendacao            #")
-    print("#   nlp + fuzzy inference + genetic algorithm           #")
-    print("#" * 60)
+    print()
+    print("  sistema inteligente de recomendação de eletrônicos")
+    print("  nlp (naive bayes) + fuzzy mamdani + algoritmo genético")
+    print("  inteligência artificial — n2")
 
-    # casos de teste representando diferentes perfis de usuario
-    casos = [
-        {
-            "descricao": "usuario satisfeito com produto caro",
-            "review": "this product is absolutely fantastic, i love it so much, best purchase ever",
-            "valor_produto": 350.0,
-            "orcamento": 1500.0
-        },
-        {
-            "descricao": "usuario insatisfeito com produto barato",
-            "review": "terrible product, completely broken, worst purchase ever, very disappointed",
-            "valor_produto": 45.0,
-            "orcamento": 600.0
-        },
-        {
-            "descricao": "usuario neutro com produto de valor medio",
-            "review": "produto razoavel, atende o basico mas poderia ser melhor",
-            "valor_produto": 180.0,
-            "orcamento": 1000.0
-        },
-    ]
+    for i, caso in enumerate(CASOS):
+        executar(caso)
+        if i < len(CASOS) - 1:
+            print()
+            input("  pressione enter para o próximo caso...")
 
-    for i, caso in enumerate(casos, 1):
-        print(f"\n\n{'#' * 60}")
-        print(f"#  caso {i}: {caso['descricao']}")
-        print(f"{'#' * 60}")
+    print()
+    linha("═")
+    print("  fim da execução")
+    linha("═")
+    print()
 
-        executar_sistema(
-            review_usuario=caso["review"],
-            valor_produto=caso["valor_produto"],
-            orcamento_usuario=caso["orcamento"]
-        )
 
-        if i < len(casos):
-            print("\n[processando proximo caso...]\n")
-
+# importa N_RECOMENDACOES para usar no main
+from camada3_ga import N_RECOMENDACOES
 
 if __name__ == "__main__":
     main()

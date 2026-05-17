@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>sistema inteligente de recomendação</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f8f7f4;
+    --surface: #ffffff;
+    --border: #e0ddd6;
+    --border-mid: #ccc9c0;
+    --text: #1a1917;
+    --text-2: #57554e;
+    --text-3: #948f85;
+    --accent: #1a1917;
+    --pos: #2d6a4f;
+    --pos-bg: #eaf4ee;
+    --neg: #9b2226;
+    --neg-bg: #fde8e9;
+    --neu: #495057;
+    --neu-bg: #f1f0ed;
+    --tag-bg: #f1f0ed;
+    --mono: 'DM Mono', monospace;
+  }
+
+  body {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* ── layout ── */
+  .wrap {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  /* ── header ── */
+  header {
+    margin-bottom: 48px;
+  }
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    margin-bottom: 10px;
+    font-weight: 400;
+  }
+  h1 {
+    font-size: 26px;
+    font-weight: 500;
+    letter-spacing: -.02em;
+    line-height: 1.2;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  .subtitle {
+    font-size: 14px;
+    color: var(--text-2);
+    max-width: 520px;
+    font-weight: 300;
+    line-height: 1.6;
+  }
+
+  /* ── section label ── */
+  .section-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .section-num {
+    width: 22px;
+    height: 22px;
+    border: 1px solid var(--border-mid);
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-2);
+    flex-shrink: 0;
+    font-family: var(--mono);
+  }
+  .section-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-2);
+    letter-spacing: .02em;
+  }
+  .section-desc {
+    font-size: 12px;
+    color: var(--text-3);
+  }
+
+  /* ── card ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+  .card + .card { margin-top: 0; }
+
+  /* ── input area ── */
+  .input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 18px;
+  }
+  .input-group label {
+    font-size: 12px;
+    color: var(--text-2);
+    font-weight: 500;
+  }
+  textarea {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 11px 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--bg);
+    resize: vertical;
+    min-height: 88px;
+    outline: none;
+    transition: border-color .15s;
+    line-height: 1.55;
+  }
+  textarea:focus { border-color: var(--border-mid); }
+
+  .row-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+  input[type="number"] {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 9px 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--bg);
+    outline: none;
+    transition: border-color .15s;
+  }
+  input[type="number"]:focus { border-color: var(--border-mid); }
+
+  /* ── ga params ── */
+  .params-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .param-item {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+  }
+  .param-item label {
+    display: block;
+    font-size: 11px;
+    color: var(--text-3);
+    margin-bottom: 4px;
+    font-weight: 400;
+  }
+  .param-val {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  input[type="range"] {
+    width: 100%;
+    margin-top: 4px;
+    accent-color: var(--text);
+  }
+
+  /* ── button ── */
+  .btn-run {
+    width: 100%;
+    padding: 12px;
+    background: var(--text);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    letter-spacing: .01em;
+    transition: opacity .15s;
+  }
+  .btn-run:hover { opacity: .85; }
+  .btn-run:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* ── chips de exemplo ── */
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+  .chip {
+    background: var(--tag-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-size: 12px;
+    color: var(--text-2);
+    cursor: pointer;
+    transition: border-color .12s;
+    font-style: italic;
+  }
+  .chip:hover { border-color: var(--border-mid); }
+
+  /* ── resultados ── */
+  .results { display: none; }
+  .results.show { display: block; }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 32px 0;
+  }
+
+  /* ── etiqueta de camada ── */
+  .layer-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    margin-bottom: 14px;
+  }
+  .layer-tag span {
+    display: inline-block;
+    width: 18px;
+    height: 1px;
+    background: var(--border-mid);
+  }
+
+  /* ── sentimento badge ── */
+  .sentiment-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 5px;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 16px;
+  }
+  .sentiment-badge.positivo { background: var(--pos-bg); color: var(--pos); }
+  .sentiment-badge.negativo { background: var(--neg-bg); color: var(--neg); }
+  .sentiment-badge.neutro   { background: var(--neu-bg); color: var(--neu); }
+
+  /* ── prob bars ── */
+  .prob-bars { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
+  .prob-row  { display: flex; align-items: center; gap: 10px; }
+  .prob-label { font-size: 12px; color: var(--text-2); width: 66px; flex-shrink: 0; }
+  .prob-track { flex: 1; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .prob-fill  { height: 100%; border-radius: 2px; transition: width .4s ease; }
+  .prob-num   { font-family: var(--mono); font-size: 12px; color: var(--text-2); width: 42px; text-align: right; }
+
+  /* ── tokens ── */
+  .token-list { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 14px; }
+  .token {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 2px 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-3);
+  }
+
+  /* ── fuzzy grid ── */
+  .fuzzy-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+  .fuzzy-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 16px;
+  }
+  .fuzzy-box-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--text-3);
+    margin-bottom: 10px;
+  }
+  .fuzzy-pert-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .fuzzy-pert-label { font-size: 12px; color: var(--text-2); width: 52px; }
+  .fuzzy-pert-bar   { flex: 1; height: 2px; background: var(--border); border-radius: 2px; }
+  .fuzzy-pert-fill  { height: 100%; background: var(--text); border-radius: 2px; transition: width .4s; }
+  .fuzzy-pert-num   { font-family: var(--mono); font-size: 11px; color: var(--text-3); width: 36px; text-align: right; }
+
+  /* ── score fuzzy destaque ── */
+  .score-display {
+    text-align: center;
+    padding: 20px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 16px;
+  }
+  .score-number {
+    font-size: 40px;
+    font-weight: 300;
+    letter-spacing: -.03em;
+    line-height: 1;
+    margin-bottom: 4px;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .score-label { font-size: 12px; color: var(--text-3); }
+
+  /* ── ga: header de params ── */
+  .ga-params-display {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .ga-param-tag {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-size: 12px;
+    color: var(--text-2);
+  }
+  .ga-param-tag b {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  /* ── convergência chart ── */
+  .conv-chart {
+    width: 100%;
+    height: 72px;
+    margin-bottom: 18px;
+  }
+
+  /* ── produtos recomendados ── */
+  .produto-list { display: flex; flex-direction: column; gap: 8px; }
+  .produto-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+  .produto-rank {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-3);
+    width: 18px;
+    flex-shrink: 0;
+  }
+  .produto-info { flex: 1; }
+  .produto-nome { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 2px; }
+  .produto-cat  { font-size: 12px; color: var(--text-3); }
+  .produto-meta { text-align: right; flex-shrink: 0; }
+  .produto-preco { font-size: 14px; font-weight: 500; color: var(--text); font-family: var(--mono); }
+  .produto-aval  { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+
+  /* ── total footer ── */
+  .total-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+    margin-top: 12px;
+  }
+  .total-label { font-size: 13px; color: var(--text-2); }
+  .total-value { font-size: 16px; font-weight: 500; font-family: var(--mono); }
+  .total-ok    { color: var(--pos); }
+  .total-over  { color: var(--neg); }
+
+  /* ── pipeline visual ── */
+  .pipeline {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 40px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .pipe-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 120px;
+    padding: 12px 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+  .pipe-num  { font-family: var(--mono); font-size: 10px; color: var(--text-3); margin-bottom: 4px; }
+  .pipe-name { font-size: 12px; font-weight: 500; color: var(--text); text-align: center; line-height: 1.3; }
+  .pipe-tech { font-size: 11px; color: var(--text-3); margin-top: 2px; font-style: italic; }
+  .pipe-arrow { font-size: 14px; color: var(--border-mid); margin: 0 6px; flex-shrink: 0; }
+
+  /* ── ga population table ── */
+  .pop-table-wrap { overflow-x: auto; margin-bottom: 16px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { font-size: 11px; font-weight: 500; color: var(--text-3); text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); letter-spacing: .04em; }
+  td { padding: 7px 10px; border-bottom: 1px solid var(--border); color: var(--text-2); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  .best-row td { background: #fafaf7; color: var(--text); font-weight: 500; }
+  .mono-cell { font-family: var(--mono); }
+
+  /* ── spinner ── */
+  .spinner {
+    display: none;
+    width: 14px; height: 14px;
+    border: 2px solid #fff4;
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 560px) {
+    .row-inputs    { grid-template-columns: 1fr; }
+    .fuzzy-grid    { grid-template-columns: 1fr; }
+    .params-grid   { grid-template-columns: 1fr 1fr; }
+    .pipeline      { gap: 0; }
+    h1             { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- header -->
+  <header>
+    <p class="eyebrow">inteligência artificial — n2</p>
+    <h1>recomendação de eletrônicos</h1>
+    <p class="subtitle">analisa o comentário do cliente, mede sentimento e custo-benefício via lógica fuzzy, e usa algoritmo genético para sugerir produtos dentro do orçamento.</p>
+  </header>
+
+  <!-- pipeline visual -->
+  <div class="pipeline">
+    <div class="pipe-step">
+      <span class="pipe-num">01</span>
+      <span class="pipe-name">percepção e sentimento</span>
+      <span class="pipe-tech">naive bayes</span>
+    </div>
+    <span class="pipe-arrow">→</span>
+    <div class="pipe-step">
+      <span class="pipe-num">02</span>
+      <span class="pipe-name">inferência fuzzy</span>
+      <span class="pipe-tech">mamdani</span>
+    </div>
+    <span class="pipe-arrow">→</span>
+    <div class="pipe-step">
+      <span class="pipe-num">03</span>
+      <span class="pipe-name">recomendação</span>
+      <span class="pipe-tech">alg. genético</span>
+    </div>
+  </div>
+
+  <!-- input -->
+  <div class="section-label">
+    <span class="section-num">1</span>
+    <span class="section-title">comentário do cliente</span>
+    <span class="section-desc">— sobre um produto eletrônico</span>
+  </div>
+
+  <div class="card">
+    <div class="chips" id="chips"></div>
+
+    <div class="input-group">
+      <label for="review">texto do comentário</label>
+      <textarea id="review" placeholder="ex: notebook excelente mas muito caro, bateria dura o dia todo..."></textarea>
+    </div>
+
+    <div class="row-inputs">
+      <div class="input-group" style="margin-bottom:0">
+        <label for="orcamento">orçamento do cliente (R$)</label>
+        <input type="number" id="orcamento" value="3000" min="100" max="50000" step="100">
+      </div>
+      <div class="input-group" style="margin-bottom:0">
+        <label for="n-rec">produtos a recomendar</label>
+        <input type="number" id="n-rec" value="4" min="2" max="6" step="1">
+      </div>
+    </div>
+  </div>
+
+  <!-- ga params -->
+  <div class="section-label" style="margin-top:8px">
+    <span class="section-num">2</span>
+    <span class="section-title">parâmetros do algoritmo genético</span>
+  </div>
+
+  <div class="card">
+    <div class="params-grid">
+      <div class="param-item">
+        <label>população</label>
+        <div class="param-val" id="lbl-pop">6</div>
+        <input type="range" id="sl-pop" min="4" max="12" value="6" step="1">
+      </div>
+      <div class="param-item">
+        <label>prob. cruzamento</label>
+        <div class="param-val" id="lbl-cruz">0.85</div>
+        <input type="range" id="sl-cruz" min="0.5" max="1.0" value="0.85" step="0.05">
+      </div>
+      <div class="param-item">
+        <label>prob. mutação</label>
+        <div class="param-val" id="lbl-mut">0.12</div>
+        <input type="range" id="sl-mut" min="0.01" max="0.4" value="0.12" step="0.01">
+      </div>
+    </div>
+
+    <button class="btn-run" id="btn-run" onclick="rodar()">
+      <span id="btn-text">analisar e recomendar</span>
+      <span class="spinner" id="spinner"></span>
+    </button>
+  </div>
+
+  <!-- resultados -->
+  <div class="results" id="results">
+    <hr class="divider">
+
+    <!-- camada 1 -->
+    <div class="section-label">
+      <span class="section-num">1</span>
+      <span class="section-title">resultado — percepção e sentimento</span>
+    </div>
+    <div class="card">
+      <div class="layer-tag"><span></span>naive bayes<span></span></div>
+      <div id="r-badge"></div>
+      <div class="prob-bars" id="r-probs"></div>
+      <div class="token-list" id="r-tokens"></div>
+    </div>
+
+    <!-- camada 2 -->
+    <div class="section-label" style="margin-top:16px">
+      <span class="section-num">2</span>
+      <span class="section-title">resultado — inferência fuzzy</span>
+    </div>
+    <div class="card">
+      <div class="layer-tag"><span></span>mamdani<span></span></div>
+      <div class="score-display">
+        <div class="score-number" id="r-score">—</div>
+        <div class="score-label">score de recomendação (0–100)</div>
+      </div>
+      <div class="fuzzy-grid">
+        <div class="fuzzy-box">
+          <div class="fuzzy-box-title">percepção de preço</div>
+          <div id="r-pert-preco"></div>
+        </div>
+        <div class="fuzzy-box">
+          <div class="fuzzy-box-title">percepção de qualidade</div>
+          <div id="r-pert-qual"></div>
+        </div>
+      </div>
+      <div style="font-size:12px; color:var(--text-3); margin-top:4px">
+        preço percebido: <span id="r-pp" style="font-family:var(--mono)">—</span> &nbsp;·&nbsp;
+        qualidade percebida: <span id="r-pq" style="font-family:var(--mono)">—</span>
+      </div>
+    </div>
+
+    <!-- camada 3 -->
+    <div class="section-label" style="margin-top:16px">
+      <span class="section-num">3</span>
+      <span class="section-title">resultado — algoritmo genético</span>
+    </div>
+    <div class="card">
+      <div class="layer-tag"><span></span>ga<span></span></div>
+
+      <div class="ga-params-display" id="r-ga-params"></div>
+
+      <!-- população inicial -->
+      <p style="font-size:12px; color:var(--text-3); margin-bottom:8px; font-weight:500;">população inicial (geração 0)</p>
+      <div class="pop-table-wrap">
+        <table id="r-pop-table">
+          <thead><tr><th>#</th><th>genes ativos</th><th>fitness</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <!-- convergência -->
+      <p style="font-size:12px; color:var(--text-3); margin-bottom:6px; font-weight:500; margin-top:16px">convergência (fitness por geração)</p>
+      <canvas class="conv-chart" id="r-conv"></canvas>
+
+      <!-- recomendações finais -->
+      <p style="font-size:12px; color:var(--text-3); margin-bottom:10px; font-weight:500; margin-top:18px">produtos recomendados</p>
+      <div class="produto-list" id="r-produtos"></div>
+
+      <div class="total-row">
+        <span class="total-label">total estimado</span>
+        <span class="total-value" id="r-total">—</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; margin-top:10px; font-size:12px; color:var(--text-3)">
+        <span>fitness final: <span id="r-fitness" style="font-family:var(--mono)">—</span></span>
+        <span id="r-orcamento-info"></span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// dados embutidos (lógica python traduzida para js)
+// ═══════════════════════════════════════════════════
+
+const CATALOGO = [
+  {id:0,  nome:"Notebook Lenovo IdeaPad 3",      preco:2799, cat:"notebook",     aval:0.82, specs:0.70},
+  {id:1,  nome:"Notebook Dell Inspiron 15",       preco:3299, cat:"notebook",     aval:0.88, specs:0.80},
+  {id:2,  nome:"SSD Kingston 480GB",              preco:229,  cat:"armazenamento",aval:0.85, specs:0.75},
+  {id:3,  nome:"SSD Samsung 970 EVO 1TB",         preco:649,  cat:"armazenamento",aval:0.95, specs:0.95},
+  {id:4,  nome:"Memória RAM 8GB DDR4 Kingston",   preco:189,  cat:"memória",      aval:0.80, specs:0.70},
+  {id:5,  nome:"Memória RAM 16GB DDR4 Crucial",   preco:319,  cat:"memória",      aval:0.90, specs:0.88},
+  {id:6,  nome:"Monitor LG 24\" Full HD",         preco:899,  cat:"monitor",      aval:0.84, specs:0.78},
+  {id:7,  nome:"Monitor Samsung 27\" QHD",        preco:1599, cat:"monitor",      aval:0.91, specs:0.90},
+  {id:8,  nome:"Teclado Mecânico Redragon K552",  preco:249,  cat:"periférico",   aval:0.87, specs:0.80},
+  {id:9,  nome:"Mouse Logitech MX Master 3",      preco:529,  cat:"periférico",   aval:0.93, specs:0.90},
+  {id:10, nome:"Webcam Logitech C920",            preco:449,  cat:"periférico",   aval:0.89, specs:0.85},
+  {id:11, nome:"Headset HyperX Cloud II",         preco:499,  cat:"áudio",        aval:0.91, specs:0.88},
+  {id:12, nome:"Placa de Vídeo RTX 3060",         preco:2199, cat:"gpu",          aval:0.90, specs:0.92},
+  {id:13, nome:"Processador Ryzen 5 5600X",       preco:1099, cat:"processador",  aval:0.93, specs:0.94},
+  {id:14, nome:"Fonte Corsair 650W 80+ Gold",     preco:599,  cat:"fonte",        aval:0.88, specs:0.86},
+];
+
+const EXEMPLOS = [
+  "notebook excelente mas muito caro, bateria dura o dia todo",
+  "ssd parou de funcionar após um mês, péssimo produto",
+  "monitor com cores vivas e sem ghosting, muito satisfeito",
+  "muito caro mas qualidade excepcional, vale cada centavo",
+  "teclado com teclas que grudam, horrível para digitar",
+  "preço justo, produto funciona dentro do esperado",
+];
+
+// ── léxico fuzzy ──
+const LEX_PRECO = {
+  "caro":+35,"caríssimo":+55,"salgado":+30,"custa muito":+40,"absurdo":+45,
+  "overpriced":+45,"expensive":+40,"pricey":+30,"preço alto":+35,"custou muito":+40,
+  "barato":-35,"econômico":-30,"acessível":-25,"custo baixo":-30,
+  "cheap":-30,"affordable":-25,"budget":-25,"em conta":-30,
+  "bom preço":-25,"vale o preço":-20,"preço justo":-20,
+  "custo benefício":-15,"cost effective":-20,
+};
+const LEX_QUAL = {
+  "excelente":+50,"incrível":+50,"ótimo":+40,"perfeito":+50,"fantástico":+50,
+  "excepcional":+55,"top":+40,"premium":+45,"rápido":+30,"potente":+35,
+  "eficiente":+35,"durável":+35,"confiável":+30,"preciso":+30,"nítido":+30,
+  "amazing":+50,"excellent":+50,"great":+40,"perfect":+50,"fast":+30,
+  "powerful":+35,"reliable":+30,"smooth":+30,"good":+30,"solid":+30,
+  "péssimo":-55,"horrível":-55,"terrível":-50,"lixo":-60,"defeito":-50,
+  "quebrou":-45,"travou":-40,"esquenta":-35,"ruim":-45,"fraco":-35,
+  "lento":-35,"barulhento":-30,"inutilizável":-55,"decepcionante":-45,
+  "terrible":-55,"awful":-55,"broken":-50,"defective":-50,"bad":-45,
+  "slow":-35,"noisy":-30,"disappointing":-45,"worst":-60,"failed":-50,
+};
+const NEGACOES_SET = new Set(["não","nao","nem","nunca","not","no","never","without"]);
+const STOP_WORDS = new Set([
+  "a","o","e","de","do","da","em","um","uma","para","com","não","no","na","os","as",
+  "dos","das","ao","mas","mais","por","se","que","foi","ser","ele","ela","nos","após",
+  "the","is","it","i","and","to","of","this","very","so","my","on","in","at","be","an",
+  "or","by","was","are","but","have","from","they","we","me","do","did","for","all","day","one","after",
+]);
+
+// ── camada 1: naive bayes (simplificado) ──
+const TREINO = [
+  ["notebook excelente processador rápido bateria dura dia todo","positivo"],
+  ["ssd transformou computador carregamento instantâneo","positivo"],
+  ["placa vídeo incrível jogos temperatura ótima","positivo"],
+  ["teclado mecânico ótima resposta tátil digitação precisa","positivo"],
+  ["monitor cores vivas sem ghosting satisfeito","positivo"],
+  ["mouse ergonômico perfeito sem dor pulso horas","positivo"],
+  ["headset som cristalino microfone sem ruído","positivo"],
+  ["webcam imagem nítida pouca luz","positivo"],
+  ["memória ram instalação fácil","positivo"],
+  ["processador potente roda tudo","positivo"],
+  ["great laptop fast processor battery","positivo"],
+  ["amazing ssd upgrade boots seconds","positivo"],
+  ["keyboard feels premium responsive","positivo"],
+  ["monitor colors vivid accurate","positivo"],
+  ["graphics card cool quiet excellent performance","positivo"],
+  ["notebook esquenta trava programas simples","negativo"],
+  ["ssd parou funcionar meses horrível","negativo"],
+  ["placa vídeo defeito artefatos tela","negativo"],
+  ["teclado teclas grudam péssima qualidade","negativo"],
+  ["monitor manchada brilho irregular decepcionante","negativo"],
+  ["mouse clique duplo inutilizável","negativo"],
+  ["headset quebrou dobradiça semana","negativo"],
+  ["webcam desfocada atraso péssima reuniões","negativo"],
+  ["memória incompatível não funcionou","negativo"],
+  ["processador chegou amassado usado","negativo"],
+  ["laptop overheats crashes worst purchase","negativo"],
+  ["ssd failed one month do not buy","negativo"],
+  ["keyboard keys sticky unresponsive terrible","negativo"],
+  ["monitor arrived dead pixels very disappointed","negativo"],
+  ["gpu artifacts day one defective product","negativo"],
+  ["notebook ok tarefas básicas nada especial","neutro"],
+  ["ssd razoável nem rápido nem lento","neutro"],
+  ["teclado comum funciona sem destaque","neutro"],
+  ["monitor aceitável preço nada impressionante","neutro"],
+  ["mouse simples atende básico","neutro"],
+  ["produto chegou prazo dentro esperado","neutro"],
+  ["laptop decent basic tasks nothing special","neutro"],
+  ["average keyboard gets job done","neutro"],
+  ["monitor okay colors acceptable","neutro"],
+];
+
+function preprocessar(texto) {
+  texto = texto.toLowerCase().replace(/[^a-zA-ZáàâãéèêíïóôõöúüçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÜÇÑ\s]/g, '');
+  const palavras = texto.split(/\s+/);
+  const tokens = [];
+  let negar = false;
+  for (const p of palavras) {
+    if (NEGACOES_SET.has(p)) { negar = true; continue; }
+    if (STOP_WORDS.has(p) || p.length < 3) { negar = false; continue; }
+    tokens.push(negar ? 'NEG_' + p : p);
+    negar = false;
+  }
+  return tokens;
+}
+
+function treinarNB() {
+  const cont = {positivo:{}, negativo:{}, neutro:{}};
+  const docs  = {positivo:0, negativo:0, neutro:0};
+  const vocab = new Set();
+  let total = 0;
+  for (const [txt, lbl] of TREINO) {
+    docs[lbl]++;
+    total++;
+    for (const t of preprocessar(txt)) {
+      cont[lbl][t] = (cont[lbl][t]||0)+1;
+      vocab.add(t);
+    }
+  }
+  return {cont, docs, vocab: vocab.size, total};
+}
+
+const NB = treinarNB();
+
+function logProb(tokens, classe) {
+  const c = NB.cont[classe];
+  const totalW = Object.values(c).reduce((a,b)=>a+b,0);
+  let lp = Math.log(NB.docs[classe]/NB.total);
+  for (const t of tokens) lp += Math.log(((c[t]||0)+1)/(totalW+NB.vocab));
+  return lp;
+}
+
+function classificar(texto) {
+  const tokens = preprocessar(texto);
+  const sc = {positivo:logProb(tokens,'positivo'), negativo:logProb(tokens,'negativo'), neutro:logProb(tokens,'neutro')};
+  const mx = Math.max(...Object.values(sc));
+  const exp = {}; let soma = 0;
+  for (const k in sc) { exp[k] = Math.exp(sc[k]-mx); soma += exp[k]; }
+  const probs = {};
+  for (const k in exp) probs[k] = exp[k]/soma;
+  const classe = Object.keys(probs).reduce((a,b)=>probs[a]>probs[b]?a:b);
+  return {classe, probs, tokens};
+}
+
+// ── camada 2: fuzzy ──
+function trap(x,a,b,c,d) {
+  if(x<=a||x>=d) return 0;
+  if(x>b&&x<=c) return 1;
+  if(x>a&&x<=b) return (x-a)/(b-a);
+  return (d-x)/(d-c);
+}
+function tri(x,a,b,c) {
+  if(x<=a||x>=c) return 0;
+  if(x>a&&x<=b) return (x-a)/(b-a);
+  return (c-x)/(c-b);
+}
+
+function extrairPercepcoes(texto) {
+  const t = texto.toLowerCase();
+  const palavras = t.split(/\s+/);
+  let rPreco=0, rQual=0;
+  for (let i=0; i<palavras.length; i++) {
+    const negar = i>0 && NEGACOES_SET.has(palavras[i-1]);
+    for (const [termo, peso] of Object.entries(LEX_PRECO)) {
+      if (t.includes(termo)) { rPreco += negar ? -peso : peso; break; }
+    }
+    for (const [termo, peso] of Object.entries(LEX_QUAL)) {
+      if (t.includes(termo)) { rQual += negar ? -peso : peso; break; }
+    }
+  }
+  return {
+    preco: Math.max(0, Math.min(100, 50+rPreco)),
+    qual:  Math.max(0, Math.min(100, 50+rQual)),
+  };
+}
+
+const FUZZIFY = {
+  preco: {
+    barato: (x)=>trap(x,0,0,20,40),
+    medio:  (x)=>tri(x,25,50,75),
+    caro:   (x)=>trap(x,60,80,100,100),
+  },
+  qual: {
+    ruim:  (x)=>trap(x,0,0,20,40),
+    media: (x)=>tri(x,25,50,75),
+    boa:   (x)=>trap(x,60,80,100,100),
+  },
+};
+const SAIDA = {
+  nao_rec: (x)=>trap(x,0,0,15,30),
+  cautela: (x)=>tri(x,15,30,50),
+  consid:  (x)=>tri(x,35,50,65),
+  recomen: (x)=>tri(x,55,70,85),
+  top:     (x)=>trap(x,75,90,100,100),
+};
+
+function calcFuzzy(texto) {
+  const {preco, qual} = extrairPercepcoes(texto);
+  const pb=FUZZIFY.preco.barato(preco), pm=FUZZIFY.preco.medio(preco), pc=FUZZIFY.preco.caro(preco);
+  const qr=FUZZIFY.qual.ruim(qual), qm=FUZZIFY.qual.media(qual), qb=FUZZIFY.qual.boa(qual);
+  const qualMuitoBoa = Math.max(0,(qual-85)/15);
+
+  const regras = [
+    [Math.min(pb,qr), SAIDA.cautela],
+    [Math.min(pb,qm), SAIDA.consid],
+    [Math.min(pb,qb), SAIDA.recomen],
+    [Math.min(pm,qr), SAIDA.nao_rec],
+    [Math.min(pm,qm), SAIDA.consid],
+    [Math.min(pm,qb), SAIDA.recomen],
+    [Math.min(pc,qr), SAIDA.nao_rec],
+    [Math.min(pc,qm), SAIDA.cautela],
+    [Math.min(pc,qb), SAIDA.consid],
+    [qualMuitoBoa*0.8, SAIDA.top],
+  ];
+
+  let num=0, den=0;
+  for (let i=0; i<=300; i++) {
+    const x = i*100/300;
+    let ativ=0;
+    for (const [g,f] of regras) ativ = Math.max(ativ, Math.min(g, f(x)));
+    num += x*ativ; den += ativ;
+  }
+  const score = den>0 ? num/den : 50;
+
+  return {
+    score, preco, qual,
+    perts_preco: {barato:pb, medio:pm, caro:pc},
+    perts_qual:  {ruim:qr, media:qm, boa:qb},
+  };
+}
+
+// ── camada 3: algoritmo genético ──
+class RNG {
+  constructor(seed=7) { this.s = seed; }
+  next() {
+    this.s = (this.s * 1664525 + 1013904223) & 0xffffffff;
+    return (this.s >>> 0) / 0xffffffff;
+  }
+  randInt(a,b) { return a + Math.floor(this.next()*(b-a+1)); }
+  choice(arr) { return arr[Math.floor(this.next()*arr.length)]; }
+  sample(arr, k) {
+    const cp=[...arr]; const res=[];
+    for(let i=0;i<k;i++) {
+      const j=Math.floor(this.next()*(cp.length-i));
+      res.push(cp[j]); cp[j]=cp[cp.length-1-i];
+    }
+    return res;
+  }
+}
+
+function criarInd(rng, nRec) {
+  const ind = new Array(CATALOGO.length).fill(0);
+  for (const i of rng.sample([...Array(CATALOGO.length).keys()], nRec)) ind[i]=1;
+  return ind;
+}
+
+function corrigir(ind, rng, nRec) {
+  let ativos = ind.flatMap((b,i)=>b?[i]:[]);
+  let inativos = ind.flatMap((b,i)=>b?[]:[i]);
+  while(ativos.length>nRec) {
+    const ri=Math.floor(rng.next()*ativos.length);
+    ind[ativos[ri]]=0; inativos.push(ativos[ri]); ativos.splice(ri,1);
+  }
+  while(ativos.length<nRec) {
+    const ri=Math.floor(rng.next()*inativos.length);
+    ind[inativos[ri]]=1; ativos.push(inativos[ri]); inativos.splice(ri,1);
+  }
+  return ind;
+}
+
+function calcFitness(ind, scoreFuzzy, orcamento) {
+  const sel = CATALOGO.filter((_,i)=>ind[i]);
+  if(!sel.length) return 0;
+  const precoT = sel.reduce((a,p)=>a+p.preco,0);
+  const avalM  = sel.reduce((a,p)=>a+p.aval,0)/sel.length;
+  const specsM = sel.reduce((a,p)=>a+p.specs,0)/sel.length;
+  const cats   = new Set(sel.map(p=>p.cat));
+  const divB   = cats.size/sel.length;
+  const pen    = precoT>orcamento ? 0.4*(precoT-orcamento)/orcamento : 0;
+  const cb     = 1-Math.min(precoT/(orcamento*1.2),1);
+  const fz     = scoreFuzzy/100;
+  return Math.max(0, 0.30*avalM + 0.25*specsM + 0.20*fz + 0.15*cb + 0.10*divB - pen);
+}
+
+function torneio(pop, fits, k, rng) {
+  const part = rng.sample([...Array(pop.length).keys()], k);
+  return [...pop[part.reduce((a,b)=>fits[a]>fits[b]?a:b)]];
+}
+
+function crossover(p1, p2, rng) {
+  const pt = rng.randInt(1, CATALOGO.length-1);
+  return [[...p1.slice(0,pt),...p2.slice(pt)], [...p2.slice(0,pt),...p1.slice(pt)]];
+}
+
+function mutacao(ind, rng) {
+  const ativos   = ind.flatMap((b,i)=>b?[i]:[]);
+  const inativos = ind.flatMap((b,i)=>b?[]:[i]);
+  if(ativos.length && inativos.length) {
+    const sai   = rng.choice(ativos);
+    const entra = rng.choice(inativos);
+    ind[sai]=0; ind[entra]=1;
+  }
+  return ind;
+}
+
+function rodarGA(scoreFuzzy, orcamento, params) {
+  const rng = new RNG(7);
+  const {tamPop, nGer, pCruz, pMut, kTorn, nRec} = params;
+
+  let pop = Array.from({length:tamPop}, ()=>criarInd(rng, nRec));
+  const fitsInic = pop.map(ind=>calcFitness(ind, scoreFuzzy, orcamento));
+  const popInic  = pop.map(ind=>[...ind]);
+
+  let melhorGlobal=null, melhorFit=-1, hist=[];
+
+  for(let g=0; g<nGer; g++) {
+    const fits = pop.map(ind=>calcFitness(ind, scoreFuzzy, orcamento));
+    const idxM = fits.indexOf(Math.max(...fits));
+    if(fits[idxM]>melhorFit) { melhorFit=fits[idxM]; melhorGlobal=[...pop[idxM]]; }
+    hist.push(+melhorFit.toFixed(4));
+
+    const nova=[melhorGlobal.slice()];
+    while(nova.length<tamPop) {
+      let f1=torneio(pop,fits,kTorn,rng), f2=torneio(pop,fits,kTorn,rng);
+      let c1,c2;
+      if(rng.next()<pCruz) { [c1,c2]=crossover(f1,f2,rng); }
+      else { c1=[...f1]; c2=[...f2]; }
+      c1=corrigir(c1,rng,nRec); c2=corrigir(c2,rng,nRec);
+      if(rng.next()<pMut) c1=mutacao(c1,rng);
+      if(rng.next()<pMut) c2=mutacao(c2,rng);
+      nova.push(c1); if(nova.length<tamPop) nova.push(c2);
+    }
+    pop=nova;
+  }
+
+  const prods = CATALOGO.filter((_,i)=>melhorGlobal[i]);
+  return {prods, melhorFit, hist, popInic, fitsInic, tamPop, nRec};
+}
+
+// ══════════════════════════════════════════
+// UI
+// ══════════════════════════════════════════
+
+// chips de exemplo
+const chipsEl = document.getElementById('chips');
+EXEMPLOS.forEach(ex => {
+  const c = document.createElement('span');
+  c.className='chip'; c.textContent=`"${ex.substring(0,42)}..."`;
+  c.onclick = ()=>{ document.getElementById('review').value=ex; };
+  chipsEl.appendChild(c);
+});
+
+// sliders
+function bindSlider(id, lblId, decimals=0) {
+  const sl=document.getElementById(id), lbl=document.getElementById(lblId);
+  const upd=()=>lbl.textContent=parseFloat(sl.value).toFixed(decimals);
+  sl.addEventListener('input', upd); upd();
+}
+bindSlider('sl-pop','lbl-pop',0);
+bindSlider('sl-cruz','lbl-cruz',2);
+bindSlider('sl-mut','lbl-mut',2);
+
+// ── desenha convergência ──
+function desenharConv(hist) {
+  const canvas=document.getElementById('r-conv');
+  const ctx=canvas.getContext('2d');
+  canvas.width=canvas.offsetWidth*2; canvas.height=144;
+  ctx.scale(2,1);
+  const W=canvas.offsetWidth, H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+
+  const mn=Math.min(...hist)*0.98, mx=Math.max(...hist)*1.01;
+  const scX=i=>(i/(hist.length-1))*(W-24)+12;
+  const scY=v=>H-8-((v-mn)/(mx-mn||1))*(H-16);
+
+  // linha de grade
+  for(let i=0;i<=4;i++) {
+    const y=scY(mn+(mx-mn)*i/4);
+    ctx.strokeStyle='#e0ddd6'; ctx.lineWidth=0.5;
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+  }
+
+  // linha do fitness
+  ctx.strokeStyle='#1a1917'; ctx.lineWidth=1.5;
+  ctx.beginPath();
+  hist.forEach((v,i)=>{ const x=scX(i), y=scY(v); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
+  ctx.stroke();
+
+  // ponto final
+  ctx.fillStyle='#1a1917';
+  ctx.beginPath(); ctx.arc(scX(hist.length-1),scY(hist[hist.length-1]),3,0,Math.PI*2); ctx.fill();
+}
+
+async function rodar() {
+  const texto = document.getElementById('review').value.trim();
+  if(!texto) { alert('escreva um comentário primeiro'); return; }
+
+  const orcamento = +document.getElementById('orcamento').value || 3000;
+  const nRec      = Math.min(6, Math.max(2, +document.getElementById('n-rec').value || 4));
+  const tamPop    = +document.getElementById('sl-pop').value;
+  const pCruz     = +document.getElementById('sl-cruz').value;
+  const pMut      = +document.getElementById('sl-mut').value;
+
+  // loading
+  const btn=document.getElementById('btn-run');
+  const sp =document.getElementById('spinner');
+  const bt =document.getElementById('btn-text');
+  btn.disabled=true; sp.style.display='inline-block'; bt.textContent='analisando...';
+  document.getElementById('results').classList.remove('show');
+
+  await new Promise(r=>setTimeout(r,60));
+
+  // ── camada 1 ──
+  const nb = classificar(texto);
+  const badge=document.getElementById('r-badge');
+  badge.innerHTML=`<div class="sentiment-badge ${nb.classe}">${nb.classe}</div>`;
+
+  const cores={positivo:'#2d6a4f',negativo:'#9b2226',neutro:'#495057'};
+  document.getElementById('r-probs').innerHTML = ['positivo','negativo','neutro'].map(k=>
+    `<div class="prob-row">
+      <span class="prob-label">${k}</span>
+      <div class="prob-track"><div class="prob-fill" style="width:${(nb.probs[k]*100).toFixed(1)}%;background:${cores[k]}"></div></div>
+      <span class="prob-num">${(nb.probs[k]*100).toFixed(1)}%</span>
+    </div>`
+  ).join('');
+
+  document.getElementById('r-tokens').innerHTML = nb.tokens.map(t=>
+    `<span class="token">${t}</span>`
+  ).join('');
+
+  // ── camada 2 ──
+  const fz = calcFuzzy(texto);
+
+  document.getElementById('r-score').textContent = fz.score.toFixed(1);
+  document.getElementById('r-pp').textContent = fz.preco.toFixed(0)+'/100';
+  document.getElementById('r-pq').textContent = fz.qual.toFixed(0)+'/100';
+
+  const mkPert = (obj) => Object.entries(obj).map(([k,v])=>
+    `<div class="fuzzy-pert-row">
+      <span class="fuzzy-pert-label">${k}</span>
+      <div class="fuzzy-pert-bar"><div class="fuzzy-pert-fill" style="width:${(v*100).toFixed(0)}%"></div></div>
+      <span class="fuzzy-pert-num">${v.toFixed(3)}</span>
+    </div>`
+  ).join('');
+
+  document.getElementById('r-pert-preco').innerHTML = mkPert(fz.perts_preco);
+  document.getElementById('r-pert-qual').innerHTML  = mkPert(fz.perts_qual);
+
+  // ── camada 3 ──
+  const params = {tamPop, nGer:80, pCruz, pMut, kTorn:3, nRec};
+  const ga = rodarGA(fz.score, orcamento, params);
+
+  document.getElementById('r-ga-params').innerHTML = [
+    `população <b>${tamPop}</b>`,
+    `gerações <b>80</b>`,
+    `cruzamento <b>${pCruz.toFixed(2)}</b>`,
+    `mutação <b>${pMut.toFixed(2)}</b>`,
+    `torneio k=<b>3</b>`,
+    `recomendados <b>${nRec}</b>`,
+  ].map(t=>`<span class="ga-param-tag">${t}</span>`).join('');
+
+  // tabela de população inicial
+  const tbody = document.querySelector('#r-pop-table tbody');
+  tbody.innerHTML='';
+  const melhorIdx = ga.fitsInic.indexOf(Math.max(...ga.fitsInic));
+  ga.popInic.forEach((ind,i)=>{
+    const prods = CATALOGO.filter((_,j)=>ind[j]).map(p=>p.nome.split(' ').slice(0,2).join(' ')).join(', ');
+    const tr=document.createElement('tr');
+    if(i===melhorIdx) tr.className='best-row';
+    tr.innerHTML=`<td class="mono-cell">${i+1}</td><td>${prods}</td><td class="mono-cell">${ga.fitsInic[i].toFixed(4)}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  // convergência
+  setTimeout(()=>desenharConv(ga.hist),60);
+
+  // produtos
+  const precoTotal = ga.prods.reduce((a,p)=>a+p.preco,0);
+  document.getElementById('r-produtos').innerHTML = ga.prods.map((p,i)=>
+    `<div class="produto-card">
+      <span class="produto-rank">${String(i+1).padStart(2,'0')}</span>
+      <div class="produto-info">
+        <div class="produto-nome">${p.nome}</div>
+        <div class="produto-cat">${p.cat}</div>
+      </div>
+      <div class="produto-meta">
+        <div class="produto-preco">R$${p.preco.toLocaleString('pt-BR')}</div>
+        <div class="produto-aval">avaliação ${(p.aval*100).toFixed(0)}%</div>
+      </div>
+    </div>`
+  ).join('');
+
+  const ok = precoTotal <= orcamento;
+  const totalEl = document.getElementById('r-total');
+  totalEl.textContent = `R$${precoTotal.toLocaleString('pt-BR')}`;
+  totalEl.className = 'total-value ' + (ok?'total-ok':'total-over');
+  document.getElementById('r-fitness').textContent = ga.melhorFit.toFixed(4);
+  document.getElementById('r-orcamento-info').textContent =
+    ok ? `dentro do orçamento de R$${orcamento.toLocaleString('pt-BR')}`
+       : `acima do orçamento de R$${orcamento.toLocaleString('pt-BR')}`;
+
+  // exibe
+  document.getElementById('results').classList.add('show');
+  btn.disabled=false; sp.style.display='none'; bt.textContent='analisar e recomendar';
+  document.getElementById('results').scrollIntoView({behavior:'smooth', block:'start'});
+}
+</script>
+</body>
+</html>
