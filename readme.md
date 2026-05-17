@@ -18,7 +18,7 @@ O cliente digita um comentário sobre um produto eletrônico. O sistema analisa 
 ## Estrutura de arquivos
 
 ```
-projeto_ia/
+n2/
     camada1_pln.py    # Naive Bayes com pré-processamento de texto
     camada2_fuzzy.py  # Sistema de inferência fuzzy Mamdani
     camada3_ga.py     # Algoritmo genético para seleção de produtos
